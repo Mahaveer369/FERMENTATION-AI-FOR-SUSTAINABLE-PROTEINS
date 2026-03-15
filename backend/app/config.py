@@ -26,6 +26,7 @@ class Settings(BaseSettings):
     # External APIs
     perplexity_api_key: str = ""
     nvidia_api_key: str = ""
+    groq_api_key: str = ""
     firebase_api_key: str = ""
     firebase_project_id: str = ""
     uniprot_base_url: str = "https://rest.uniprot.org"
