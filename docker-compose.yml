@@ -38,6 +38,7 @@ services:
       - SECRET_KEY=${SECRET_KEY}
       - DEBUG=${DEBUG:-false}
       - PERPLEXITY_API_KEY=${PERPLEXITY_API_KEY:-}
+      - NVIDIA_API_KEY=${NVIDIA_API_KEY:-}
       - FIREBASE_API_KEY=${FIREBASE_API_KEY:-}
       - FIREBASE_PROJECT_ID=${FIREBASE_PROJECT_ID:-}
       - REDIS_URL=redis://redis:6379/0

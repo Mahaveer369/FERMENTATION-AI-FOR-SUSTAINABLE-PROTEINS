@@ -117,6 +117,21 @@ Be concise and scientific."""
             elif isinstance(response, dict):
                 return response.get('content', str(response))
             else:
+                return str(response)
+                
+        except Exception as e:
+            logger.error(f"NVIDIA AI invoke error: {e}")
+            raise
+    
+    def _generate_fallback_explanation(
+        self,
+        params: Dict,
+        result: SimulationResult,
+        microbe: str,
+        substrate: str
+    ) -> str:
+        """Generate rule-based explanation when API is unavailable"""
+        explanation_parts = []
         
         # Yield analysis
         if result.predicted_yield > 30:
