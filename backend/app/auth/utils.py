@@ -2,6 +2,7 @@
 FermaGen AI - Authentication Utilities
 JWT token generation and password hashing
 """
+import logging
 from datetime import datetime, timedelta
 from typing import Optional
 from jose import JWTError, jwt
@@ -14,6 +15,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.config import get_settings
 from app.database.database import get_db, User
 from app.auth.schemas import TokenData
+
+# Configure logging
+logger = logging.getLogger(__name__)
 
 settings = get_settings()
 
@@ -52,10 +56,9 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -
 def decode_token(token: str) -> TokenData:
     """Decode and validate a JWT token"""
     try:
-        print(f"[DEBUG] Decoding token: {token[:50]}...")
-        print(f"[DEBUG] Using secret key: {settings.secret_key[:10]}...")
+        logger.debug("Decoding JWT token")
         payload = jwt.decode(token, settings.secret_key, algorithms=[settings.algorithm])
-        print(f"[DEBUG] Payload decoded: {payload}")
+        
         # Note: sub is stored as string but we need integer for user lookup
         user_id_str = payload.get("sub")
         user_id = int(user_id_str) if user_id_str else None
@@ -63,19 +66,20 @@ def decode_token(token: str) -> TokenData:
         role: str = payload.get("role")
         
         if user_id is None:
-            print("[DEBUG] User ID is None in token")
+            logger.warning("User ID is None in token payload")
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid token"
             )
         
+        logger.debug(f"Token validated for user_id: {user_id}")
         return TokenData(user_id=user_id, email=email, role=role)
     
     except JWTError as e:
-        print(f"[DEBUG] JWT Error: {e}")
+        logger.warning(f"JWT validation failed: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid token"
+            detail="Invalid or expired token"
         )
 
 
