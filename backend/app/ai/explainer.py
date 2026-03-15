@@ -1,6 +1,6 @@
 """
 FermaGen AI - AI Explanation Generator
-Uses NVIDIA AI Endpoints for generating scientific explanations
+Uses Groq API for generating scientific explanations
 """
 import logging
 from typing import Dict, Optional
@@ -14,32 +14,13 @@ settings = get_settings()
 class AIExplainer:
     """
     AI-powered explanation generator for fermentation results.
-    Uses NVIDIA AI Endpoints to generate scientific, human-readable explanations.
+    Uses Groq API to generate scientific, human-readable explanations.
     """
     
     def __init__(self):
-        self.api_key = settings.nvidia_api_key
-        self.model = "qwen/qwen3.5-122b-a10b"
-        self.client = None
+        self.api_key = settings.groq_api_key
+        self.model = "llama-3.1-70b-versatile"
         
-    async def _get_client(self):
-        """Lazy load NVIDIA client"""
-        if not self.client and self.api_key:
-            try:
-                from langchain_nvidia_ai_endpoints import ChatNVIDIA
-                self.client = ChatNVIDIA(
-                    model=self.model,
-                    api_key=self.api_key,
-                    temperature=0.6,
-                    top_p=0.95,
-                    max_completion_tokens=16384,
-                )
-                logger.info("NVIDIA AI client initialized successfully")
-            except Exception as e:
-                logger.error(f"Failed to initialize NVIDIA client: {e}")
-                self.client = None
-        return self.client
-    
     async def generate_explanation(
         self,
         params: Dict,
@@ -50,32 +31,32 @@ class AIExplainer:
         """
         Generate AI explanation for fermentation results.
         
-        If NVIDIA API is not available, falls back to rule-based explanation.
+        If Groq API is not available, falls back to rule-based explanation.
         """
         if not self.api_key:
-            logger.warning("NVIDIA API key not configured, using fallback explanation")
+            logger.warning("Groq API key not configured, using fallback explanation")
             return self._generate_fallback_explanation(params, result, microbe, substrate)
         
         try:
-            client = await self._get_client()
-            if not client:
-                return self._generate_fallback_explanation(params, result, microbe, substrate)
-            
-            return await self._call_nvidia_ai(params, result, microbe, substrate, client)
+            return await self._call_groq_api(params, result, microbe, substrate)
         except Exception as e:
-            logger.error(f"NVIDIA AI API error: {e}")
+            logger.error(f"Groq AI API error: {e}")
             return self._generate_fallback_explanation(params, result, microbe, substrate)
     
-    async def _call_nvidia_ai(
+    async def _call_groq_api(
         self,
         params: Dict,
         result: SimulationResult,
         microbe: str,
-        substrate: str,
-        client
+        substrate: str
     ) -> str:
-        """Call NVIDIA AI API for explanation"""
-        prompt = f"""You are a fermentation scientist. Explain these simulation results in 2-3 paragraphs:
+        """Call Groq API for explanation"""
+        try:
+            from groq import AsyncGroq
+            
+            client = AsyncGroq(api_key=self.api_key)
+            
+            prompt = f"""You are a fermentation scientist. Explain these simulation results in 2-3 paragraphs:
 
 Microbe: {microbe}
 Substrate: {substrate}
@@ -97,30 +78,27 @@ Explain:
 
 Be concise and scientific."""
 
-        try:
-            from langchain.schema import HumanMessage, SystemMessage
-            
-            messages = [
-                SystemMessage(content="You are a fermentation scientist providing concise technical analysis."),
-                HumanMessage(content=prompt)
-            ]
-            
-            # Invoke the model
-            response = client.invoke(
-                messages,
-                chat_template_kwargs={"enable_thinking": True}
+            response = await client.chat.completions.create(
+                model=self.model,
+                messages=[
+                    {
+                        "role": "system",
+                        "content": "You are a fermentation scientist providing concise technical analysis."
+                    },
+                    {
+                        "role": "user",
+                        "content": prompt
+                    }
+                ],
+                temperature=0.6,
+                max_completion_tokens=16384,
+                top_p=0.95
             )
             
-            # Extract content from response
-            if hasattr(response, 'content'):
-                return response.content
-            elif isinstance(response, dict):
-                return response.get('content', str(response))
-            else:
-                return str(response)
-                
+            return response.choices[0].message.content
+            
         except Exception as e:
-            logger.error(f"NVIDIA AI invoke error: {e}")
+            logger.error(f"Groq API call error: {e}")
             raise
     
     def _generate_fallback_explanation(
