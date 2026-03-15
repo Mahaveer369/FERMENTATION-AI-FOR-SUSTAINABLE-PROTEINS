@@ -92,7 +92,32 @@ export default function OptimizePage() {
 
         try {
             const data = await ai.optimize(formData);
-            setResult(data);
+            // Transform backend response to frontend format
+            const transformed: OptimizationResult = {
+                best_solution: {
+                    temperature: data.optimal_params?.temperature || data.optimal_params?.temp || 30,
+                    ph: data.optimal_params?.ph || 6,
+                    duration: data.optimal_params?.duration || data.optimal_params?.time || 48,
+                },
+                predicted_metrics: {
+                    yield: data.predicted_outcomes?.yield || data.predicted_outcomes?.yield_g_per_l || 0,
+                    energy: data.predicted_outcomes?.energy || data.predicted_outcomes?.energy_usage || 0,
+                    co2: data.predicted_outcomes?.co2 || data.predicted_outcomes?.co2_footprint || 0,
+                    time: data.optimal_params?.duration || 48,
+                },
+                pareto_front: (data.pareto_solutions || data.pareto_front || []).map((sol: any) => ({
+                    temperature: sol.params?.temperature || sol.temperature || 30,
+                    ph: sol.params?.ph || sol.ph || 6,
+                    duration: sol.params?.duration || sol.duration || 48,
+                    fitness: [sol.yield || 0, sol.duration || 0, sol.co2 || 0],
+                })),
+                improvements: {
+                    yield_improvement: data.improvement_over_baseline?.yield || data.improvements?.yield_improvement || 0,
+                    time_reduction: data.improvement_over_baseline?.duration || data.improvements?.time_reduction || 0,
+                    co2_reduction: data.improvement_over_baseline?.co2 || data.improvements?.co2_reduction || 0,
+                },
+            };
+            setResult(transformed);
         } catch (err: any) {
             setError(err.message || "Optimization failed");
         } finally {
