@@ -1,28 +1,44 @@
 """
 FermaGen AI - AI Explanation Generator
-Uses Perplexity API for generating scientific explanations
+Uses NVIDIA AI Endpoints for generating scientific explanations
 """
-import httpx
+import logging
 from typing import Dict, Optional
-import json
-
 from app.config import get_settings
 from app.experiments.simulation import SimulationResult
 
+logger = logging.getLogger(__name__)
 settings = get_settings()
 
 
 class AIExplainer:
     """
     AI-powered explanation generator for fermentation results.
-    Uses Perplexity API to generate scientific, human-readable explanations.
+    Uses NVIDIA AI Endpoints to generate scientific, human-readable explanations.
     """
     
-    PERPLEXITY_API_URL = "https://api.perplexity.ai/chat/completions"
-    
     def __init__(self):
-        self.api_key = settings.perplexity_api_key
-        self.model = "llama-3.1-sonar-small-128k-online"  # Fast, free-tier friendly
+        self.api_key = settings.nvidia_api_key
+        self.model = "qwen/qwen3.5-122b-a10b"
+        self.client = None
+        
+    async def _get_client(self):
+        """Lazy load NVIDIA client"""
+        if not self.client and self.api_key:
+            try:
+                from langchain_nvidia_ai_endpoints import ChatNVIDIA
+                self.client = ChatNVIDIA(
+                    model=self.model,
+                    api_key=self.api_key,
+                    temperature=0.6,
+                    top_p=0.95,
+                    max_completion_tokens=16384,
+                )
+                logger.info("NVIDIA AI client initialized successfully")
+            except Exception as e:
+                logger.error(f"Failed to initialize NVIDIA client: {e}")
+                self.client = None
+        return self.client
     
     async def generate_explanation(
         self,
@@ -34,25 +50,31 @@ class AIExplainer:
         """
         Generate AI explanation for fermentation results.
         
-        If Perplexity API is not available, falls back to rule-based explanation.
+        If NVIDIA API is not available, falls back to rule-based explanation.
         """
         if not self.api_key:
+            logger.warning("NVIDIA API key not configured, using fallback explanation")
             return self._generate_fallback_explanation(params, result, microbe, substrate)
         
         try:
-            return await self._call_perplexity(params, result, microbe, substrate)
+            client = await self._get_client()
+            if not client:
+                return self._generate_fallback_explanation(params, result, microbe, substrate)
+            
+            return await self._call_nvidia_ai(params, result, microbe, substrate, client)
         except Exception as e:
-            print(f"Perplexity API error: {e}")
+            logger.error(f"NVIDIA AI API error: {e}")
             return self._generate_fallback_explanation(params, result, microbe, substrate)
     
-    async def _call_perplexity(
+    async def _call_nvidia_ai(
         self,
         params: Dict,
         result: SimulationResult,
         microbe: str,
-        substrate: str
+        substrate: str,
+        client
     ) -> str:
-        """Call Perplexity API for explanation"""
+        """Call NVIDIA AI API for explanation"""
         prompt = f"""You are a fermentation scientist. Explain these simulation results in 2-3 paragraphs:
 
 Microbe: {microbe}
@@ -75,48 +97,26 @@ Explain:
 
 Be concise and scientific."""
 
-        headers = {
-            "Authorization": f"Bearer {self.api_key}",
-            "Content-Type": "application/json"
-        }
-        
-        payload = {
-            "model": self.model,
-            "messages": [
-                {
-                    "role": "system",
-                    "content": "You are a fermentation scientist providing concise technical analysis."
-                },
-                {
-                    "role": "user",
-                    "content": prompt
-                }
-            ],
-            "max_tokens": 500,
-            "temperature": 0.3
-        }
-        
-        async with httpx.AsyncClient() as client:
-            response = await client.post(
-                self.PERPLEXITY_API_URL,
-                headers=headers,
-                json=payload,
-                timeout=30.0
-            )
-            response.raise_for_status()
+        try:
+            from langchain.schema import HumanMessage, SystemMessage
             
-            data = response.json()
-            return data["choices"][0]["message"]["content"]
-    
-    def _generate_fallback_explanation(
-        self,
-        params: Dict,
-        result: SimulationResult,
-        microbe: str,
-        substrate: str
-    ) -> str:
-        """Generate rule-based explanation when API is unavailable"""
-        explanation_parts = []
+            messages = [
+                SystemMessage(content="You are a fermentation scientist providing concise technical analysis."),
+                HumanMessage(content=prompt)
+            ]
+            
+            # Invoke the model
+            response = client.invoke(
+                messages,
+                chat_template_kwargs={"enable_thinking": True}
+            )
+            
+            # Extract content from response
+            if hasattr(response, 'content'):
+                return response.content
+            elif isinstance(response, dict):
+                return response.get('content', str(response))
+            else:
         
         # Yield analysis
         if result.predicted_yield > 30:
