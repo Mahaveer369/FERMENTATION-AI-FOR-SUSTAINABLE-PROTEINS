@@ -56,27 +56,18 @@ class AIExplainer:
             
             client = AsyncGroq(api_key=self.api_key)
             
-            prompt = f"""You are a fermentation scientist. Explain these simulation results in 2-3 paragraphs:
+            prompt = f"""You are a fermentation scientist. Give a very concise analysis in exactly 3 lines:
 
 Microbe: {microbe}
 Substrate: {substrate}
-Temperature: {params.get('temperature', 30)}°C
-pH: {params.get('ph', 6)}
-Duration: {params.get('duration', 48)} hours
+Temp: {params.get('temperature', 30)}°C | pH: {params.get('ph', 6)} | Duration: {params.get('duration', 48)}h
 
 Results:
-- Predicted Yield: {result.predicted_yield} g/L
-- Energy Usage: {result.energy_usage} kWh
-- CO2 Footprint: {result.co2_footprint} kg
-- Protein Quality Score: {result.protein_score}/100
-- Sustainability Score: {result.sustainability_score}/100
+- Yield: {result.predicted_yield} g/L
+- Energy: {result.energy_usage} kWh | CO2: {result.co2_footprint} kg
+- Protein: {result.protein_score}/100 | Sustainability: {result.sustainability_score}/100
 
-Explain:
-1. Why these conditions produced this yield
-2. How to improve sustainability
-3. One key optimization suggestion
-
-Be concise and scientific."""
+Provide exactly 3 sentences covering: 1) yield analysis, 2) sustainability, 3) one recommendation."""
 
             response = await client.chat.completions.create(
                 model=self.model,
@@ -91,7 +82,7 @@ Be concise and scientific."""
                     }
                 ],
                 temperature=0.6,
-                max_tokens=16384,
+                max_tokens=200,
                 top_p=0.95
             )
             
