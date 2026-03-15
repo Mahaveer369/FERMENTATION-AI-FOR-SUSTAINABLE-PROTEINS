@@ -19,7 +19,7 @@ class AIExplainer:
     
     def __init__(self):
         self.api_key = settings.groq_api_key
-        self.model = "llama-3.1-70b-versatile"
+        self.model = "llama-3.3-70b-versatile"
         
     async def generate_explanation(
         self,
@@ -91,7 +91,7 @@ Be concise and scientific."""
                     }
                 ],
                 temperature=0.6,
-                max_completion_tokens=16384,
+                max_tokens=16384,
                 top_p=0.95
             )
             
