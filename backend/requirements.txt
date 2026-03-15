@@ -37,6 +37,13 @@ aiohttp==3.9.3
 langchain==0.1.4
 langchain-community==0.0.14
 
+# Caching & Rate Limiting
+redis==5.0.1
+slowapi==0.1.9
+
+# Logging
+structlog==24.1.0
+
 # Utilities
 python-dotenv==1.0.0
 orjson==3.9.12
