@@ -1,10 +1,13 @@
 """
 FermaGen AI - Authentication Routes
 """
-from fastapi import APIRouter, Depends, HTTPException, status
+import logging
+from fastapi import APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from datetime import timedelta
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 
 from app.database.database import get_db, User
 from app.auth.schemas import UserCreate, UserLogin, UserResponse, Token
@@ -16,12 +19,15 @@ from app.auth.utils import (
 )
 from app.config import get_settings
 
+logger = logging.getLogger(__name__)
 settings = get_settings()
+limiter = Limiter(key_func=get_remote_address)
 router = APIRouter()
 
 
 @router.post("/register", response_model=Token, status_code=status.HTTP_201_CREATED)
-async def register(user_data: UserCreate, db: AsyncSession = Depends(get_db)):
+@limiter.limit(f"{settings.rate_limit_per_minute}/minute")
+async def register(request: Request, user_data: UserCreate, db: AsyncSession = Depends(get_db)):
     """
     Register a new user
     
@@ -72,7 +78,8 @@ async def register(user_data: UserCreate, db: AsyncSession = Depends(get_db)):
 
 
 @router.post("/login", response_model=Token)
-async def login(credentials: UserLogin, db: AsyncSession = Depends(get_db)):
+@limiter.limit(f"{settings.rate_limit_per_minute}/minute")
+async def login(request: Request, credentials: UserLogin, db: AsyncSession = Depends(get_db)):
     """
     Login with email and password
     
@@ -146,7 +153,8 @@ class FirebaseAuthRequest(BaseModel):
 
 
 @router.post("/firebase", response_model=Token)
-async def firebase_auth(auth_data: FirebaseAuthRequest, db: AsyncSession = Depends(get_db)):
+@limiter.limit(f"{settings.rate_limit_per_minute}/minute")
+async def firebase_auth(request: Request, auth_data: FirebaseAuthRequest, db: AsyncSession = Depends(get_db)):
     """
     Authenticate user with Firebase ID token (Google Sign-In)
     
