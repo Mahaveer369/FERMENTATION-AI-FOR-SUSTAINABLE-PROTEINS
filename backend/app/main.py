@@ -13,6 +13,7 @@ from slowapi.errors import RateLimitExceeded
 
 from app.config import get_settings
 from app.database.database import init_db
+from app.cache import init_cache, close_cache
 from app.auth.routes import router as auth_router
 from app.experiments.routes import router as experiments_router
 from app.protein.routes import router as protein_router
@@ -41,7 +42,15 @@ async def lifespan(app: FastAPI):
     logger.info("Starting FermaGen AI application")
     await init_db()
     logger.info("Database initialized successfully")
+    
+    # Initialize cache
+    await init_cache()
+    
     yield
+    
+    # Close cache on shutdown
+    await close_cache()
+    
     logger.info("Shutting down FermaGen AI application")
 
 
