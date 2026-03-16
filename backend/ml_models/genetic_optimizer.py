@@ -204,3 +204,91 @@ class GeneticOptimizer:
         # For each objective
         num_objectives = len(front[0].objectives)
         
+        for obj_idx in range(num_objectives):
+            # Sort by objective
+            sorted_front = sorted(front, key=lambda x: x.objectives[obj_idx])
+            
+            # Boundary solutions get infinite distance
+            sorted_front[0].fitness = float('inf')
+            sorted_front[-1].fitness = float('inf')
+            
+            # Calculate range
+            obj_range = (
+                sorted_front[-1].objectives[obj_idx] -
+                sorted_front[0].objectives[obj_idx]
+            )
+            
+            if obj_range == 0:
+                continue
+            
+            # Calculate crowding distance
+            for i in range(1, len(sorted_front) - 1):
+                sorted_front[i].fitness += (
+                    sorted_front[i + 1].objectives[obj_idx] -
+                    sorted_front[i - 1].objectives[obj_idx]
+                ) / obj_range
+    
+    def _tournament_selection(
+        self,
+        population: List[Individual]
+    ) -> Individual:
+        """Tournament selection"""
+        tournament = np.random.choice(
+            population,
+            size=min(self.config.tournament_size, len(population)),
+            replace=False
+        )
+        
+        # Prefer non-dominated solutions
+        non_dominated = [t for t in tournament if not t.dominated]
+        
+        if non_dominated:
+            return max(non_dominated, key=lambda x: x.fitness)
+        
+        return max(tournament, key=lambda x: x.fitness)
+    
+    def _crossover(
+        self,
+        parent1: Individual,
+        parent2: Individual
+    ) -> Tuple[Individual, Individual]:
+        """Simulated Binary Crossover (SBX)"""
+        child1_genes = {}
+        child2_genes = {}
+        
+        for key in parent1.genes:
+            if np.random.random() < self.config.crossover_rate:
+                # Uniform crossover
+                if np.random.random() < 0.5:
+                    child1_genes[key] = parent1.genes[key]
+                    child2_genes[key] = parent2.genes[key]
+                else:
+                    child1_genes[key] = parent2.genes[key]
+                    child2_genes[key] = parent1.genes[key]
+            else:
+                child1_genes[key] = parent1.genes[key]
+                child2_genes[key] = parent2.genes[key]
+        
+        return Individual(genes=child1_genes), Individual(genes=child2_genes)
+    
+    def _mutate(
+        self,
+        individual: Individual,
+        bounds: Optional[Dict[str, Tuple[float, float]]] = None
+    ) -> Individual:
+        """Gaussian mutation"""
+        bounds = bounds or self.DEFAULT_BOUNDS
+        mutated_genes = deepcopy(individual.genes)
+        
+        for key in mutated_genes:
+            if np.random.random() < self.config.mutation_rate:
+                std = self.MUTATION_STD.get(key, 1.0)
+                mutated_genes[key] += np.random.normal(0, std)
+                
+                # Clip to bounds
+                mutated_genes[key] = np.clip(
+                    mutated_genes[key],
+                    bounds[key][0],
+                    bounds[key][1]
+                )
+        
