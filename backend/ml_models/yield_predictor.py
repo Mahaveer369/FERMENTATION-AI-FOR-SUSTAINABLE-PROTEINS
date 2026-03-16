@@ -99,3 +99,31 @@ class YieldPredictor:
             "protein_potential": 78,
         },
     }
+    
+    # Substrate profiles
+    SUBSTRATE_PROFILES = {
+        "glucose": {"energy": 15.6, "conversion": 0.5, "co2_factor": 0.95},
+        "sucrose": {"energy": 16.5, "conversion": 0.48, "co2_factor": 0.92},
+        "maltose": {"energy": 15.8, "conversion": 0.45, "co2_factor": 0.88},
+        "glycerol": {"energy": 17.6, "conversion": 0.55, "co2_factor": 0.75},
+        "methanol": {"energy": 22.7, "conversion": 0.4, "co2_factor": 1.1},
+        "lactose": {"energy": 15.4, "conversion": 0.42, "co2_factor": 0.85},
+        "starch": {"energy": 17.0, "conversion": 0.35, "co2_factor": 0.82},
+    }
+    
+    def __init__(self, noise_factor: float = 0.05):
+        """
+        Initialize Yield Predictor.
+        
+        Args:
+            noise_factor: Random noise factor for realistic variation
+        """
+        self.noise_factor = noise_factor
+    
+    def _normalize_microbe(self, name: str) -> str:
+        """Normalize microbe name"""
+        normalized = name.lower().replace(" ", "_").replace("-", "_")
+        if normalized in self.MICROBE_PROFILES:
+            return normalized
+        return "escherichia_coli"
+    
