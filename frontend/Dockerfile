@@ -1,5 +1,5 @@
 # FermaGen AI Frontend Dockerfile
-FROM node:20-alpine
+FROM node:20.11.0-alpine
 
 WORKDIR /app
 

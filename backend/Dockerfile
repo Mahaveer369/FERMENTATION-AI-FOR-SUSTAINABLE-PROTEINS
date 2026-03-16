@@ -1,5 +1,5 @@
 # FermaGen AI Backend Dockerfile - Production Optimized
-FROM python:3.11-slim AS builder
+FROM python:3.11.9-slim AS builder
 
 # Install build dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -15,7 +15,7 @@ RUN pip install --no-cache-dir --prefix=/install -r requirements.txt
 
 
 # Production image
-FROM python:3.11-slim
+FROM python:3.11.9-slim
 
 # Install runtime dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
