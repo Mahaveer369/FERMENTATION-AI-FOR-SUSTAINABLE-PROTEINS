@@ -288,3 +288,214 @@ class YieldPredictor:
         # Metabolic CO2
         metabolic_co2 = predicted_yield * substrate_profile["co2_factor"] * 0.05
         
+        # Energy CO2 (grid emission factor ~0.4 kg/kWh)
+        energy_co2 = energy_usage * 0.4
+        
+        # Processing overhead
+        processing_co2 = 0.1
+        
+        total_co2 = metabolic_co2 + energy_co2 + processing_co2
+        
+        if add_noise:
+            noise = np.random.normal(1.0, self.noise_factor)
+            total_co2 = max(0.01, total_co2 * noise)
+        
+        return float(total_co2)
+    
+    def predict_protein_score(
+        self,
+        params: YieldInput,
+        predicted_yield: float,
+        add_noise: bool = True
+    ) -> float:
+        """
+        Predict protein quality score.
+        
+        Args:
+            params: Input parameters
+            predicted_yield: Predicted yield in g/L
+            add_noise: Whether to add random variation
+        
+        Returns:
+            Protein score (0-100)
+        """
+        microbe = self._normalize_microbe(params.microbe_type)
+        profile = self.MICROBE_PROFILES[microbe]
+        
+        # Base score from microbe potential
+        base_score = profile["protein_potential"]
+        
+        # Condition factors
+        temp_factor = self._gaussian_response(
+            params.temperature,
+            profile["optimal_temp"],
+            profile["temp_range"]
+        )
+        ph_factor = self._gaussian_response(
+            params.ph,
+            profile["optimal_ph"],
+            profile["ph_range"]
+        )
+        
+        # Yield factor
+        yield_factor = min(1.0, predicted_yield / profile["max_yield"])
+        
+        # Calculate final score
+        condition_modifier = (temp_factor * ph_factor * yield_factor) ** 0.5
+        protein_score = base_score * condition_modifier
+        
+        if add_noise:
+            noise = np.random.normal(1.0, self.noise_factor / 2)
+            protein_score = max(0, min(100, protein_score * noise))
+        
+        return float(np.clip(protein_score, 0, 100))
+    
+    def calculate_sustainability_score(
+        self,
+        predicted_yield: float,
+        energy_usage: float,
+        co2_footprint: float
+    ) -> float:
+        """
+        Calculate sustainability score.
+        
+        Args:
+            predicted_yield: Yield in g/L
+            energy_usage: Energy in kWh
+            co2_footprint: CO2 in kg
+        
+        Returns:
+            Sustainability score (0-100)
+        """
+        # Yield score
+        yield_score = min(100, predicted_yield / 50 * 100)
+        
+        # Energy efficiency (kWh per gram)
+        if predicted_yield > 0:
+            energy_per_yield = energy_usage / predicted_yield
+            energy_score = max(0, 100 - energy_per_yield * 50)
+        else:
+            energy_score = 0
+        
+        # CO2 efficiency (kg per gram)
+        if predicted_yield > 0:
+            co2_per_yield = co2_footprint / predicted_yield
+            co2_score = max(0, 100 - co2_per_yield * 100)
+        else:
+            co2_score = 0
+        
+        # Weighted average
+        sustainability = yield_score * 0.3 + energy_score * 0.35 + co2_score * 0.35
+        
+        return float(np.clip(sustainability, 0, 100))
+    
+    def predict(
+        self,
+        params: YieldInput,
+        add_noise: bool = True
+    ) -> YieldOutput:
+        """
+        Run complete yield prediction.
+        
+        Args:
+            params: Input parameters
+            add_noise: Whether to add random variation
+        
+        Returns:
+            Complete prediction results
+        """
+        # Predict yield and confidence
+        predicted_yield, confidence = self.predict_yield(params, add_noise)
+        
+        # Predict energy
+        energy_usage = self.predict_energy(params, predicted_yield, add_noise)
+        
+        # Predict CO2
+        co2_footprint = self.predict_co2(
+            params, predicted_yield, energy_usage, add_noise
+        )
+        
+        # Predict protein score
+        protein_score = self.predict_protein_score(
+            params, predicted_yield, add_noise
+        )
+        
+        # Calculate derived metrics
+        microbe = self._normalize_microbe(params.microbe_type)
+        profile = self.MICROBE_PROFILES[microbe]
+        
+        efficiency = min(100, predicted_yield / profile["max_yield"] * 100)
+        purity = min(100, 70 + protein_score / 100 * 30)
+        
+        # Calculate sustainability score
+        sustainability_score = self.calculate_sustainability_score(
+            predicted_yield, energy_usage, co2_footprint
+        )
+        
+        return YieldOutput(
+            predicted_yield=round(predicted_yield, 2),
+            energy_usage=round(energy_usage, 2),
+            co2_footprint=round(co2_footprint, 3),
+            protein_score=round(protein_score, 1),
+            purity=round(purity, 1),
+            efficiency=round(efficiency, 1),
+            sustainability_score=round(sustainability_score, 1),
+            confidence=round(confidence, 2)
+        )
+    
+    def get_microbe_profile(self, microbe: str) -> Dict:
+        """Get profile for a specific microbe"""
+        return self.MICROBE_PROFILES.get(
+            self._normalize_microbe(microbe),
+            self.MICROBE_PROFILES["escherichia_coli"]
+        )
+    
+    def get_substrate_profile(self, substrate: str) -> Dict:
+        """Get profile for a specific substrate"""
+        return self.SUBSTRATE_PROFILES.get(
+            self._normalize_substrate(substrate),
+            self.SUBSTRATE_PROFILES["glucose"]
+        )
+
+
+# Singleton instance
+yield_predictor = YieldPredictor()
+
+
+def predict_yield(
+    microbe_type: str,
+    substrate: str,
+    temperature: float,
+    ph: float,
+    duration: float,
+    oxygen_level: float = 21.0,
+    agitation_speed: float = 200.0,
+    add_noise: bool = True
+) -> YieldOutput:
+    """
+    Convenience function for yield prediction.
+    
+    Args:
+        microbe_type: Microorganism type
+        substrate: Carbon source
+        temperature: Temperature in Celsius
+        ph: pH level
+        duration: Fermentation duration in hours
+        oxygen_level: Oxygen level (%)
+        agitation_speed: Agitation speed (RPM)
+        add_noise: Whether to add random variation
+    
+    Returns:
+        Prediction results
+    """
+    params = YieldInput(
+        microbe_type=microbe_type,
+        substrate=substrate,
+        temperature=temperature,
+        ph=ph,
+        duration=duration,
+        oxygen_level=oxygen_level,
+        agitation_speed=agitation_speed
+    )
+    
+    return yield_predictor.predict(params, add_noise)
