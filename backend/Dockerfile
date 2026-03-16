@@ -1,5 +1,5 @@
 # FermaGen AI Backend Dockerfile - Production Optimized
-FROM python:3.11.9-slim AS builder
+FROM python:3.11-slim AS builder
 
 # Install build dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -15,13 +15,18 @@ RUN pip install --no-cache-dir --prefix=/install -r requirements.txt
 
 
 # Production image
-FROM python:3.11.9-slim
+FROM python:3.11-slim
 
 # Install runtime dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libpq5 \
     curl \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/* || true
+
+# If apt fails, try without update
+RUN if ! command -v curl &> /dev/null; then \
+    apt-get install -y --no-install-recommends curl || true; \
+    fi
 
 WORKDIR /app
 
@@ -30,6 +35,9 @@ COPY --from=builder /install /usr/local
 
 # Copy application
 COPY app/ ./app/
+
+# Copy ml_models
+COPY ml_models/ ./ml_models/
 
 # Create non-root user for security
 RUN useradd -m -u 1000 appuser && chown -R appuser:appuser /app
