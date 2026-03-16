@@ -292,3 +292,180 @@ class GeneticOptimizer:
                     bounds[key][1]
                 )
         
+        return Individual(genes=mutated_genes)
+    
+    def _select_next_generation(
+        self,
+        population: List[Individual]
+    ) -> List[Individual]:
+        """Select individuals for next generation (elitism + tournament)"""
+        # Sort by fitness (higher is better)
+        sorted_pop = sorted(population, key=lambda x: x.fitness, reverse=True)
+        
+        # Keep elites
+        next_gen = sorted_pop[:self.config.elite_count]
+        
+        # Fill rest with tournament selection
+        while len(next_gen) < self.config.population_size:
+            parent1 = self._tournament_selection(population)
+            parent2 = self._tournament_selection(population)
+            
+            child1, child2 = self._crossover(parent1, parent2)
+            child1 = self._mutate(child1)
+            child2 = self._mutate(child2)
+            
+            next_gen.append(child1)
+            if len(next_gen) < self.config.population_size:
+                next_gen.append(child2)
+        
+        return next_gen[:self.config.population_size]
+    
+    def optimize(
+        self,
+        bounds: Optional[Dict[str, Tuple[float, float]]] = None,
+        objectives: Optional[List[OptimizationObjective]] = None,
+        callback: Optional[Callable] = None
+    ) -> Dict:
+        """
+        Run multi-objective optimization.
+        
+        Args:
+            bounds: Parameter bounds
+            objectives: List of optimization objectives
+            callback: Optional callback for progress updates
+        
+        Returns:
+            Dictionary with optimization results
+        """
+        bounds = bounds or self.DEFAULT_BOUNDS
+        
+        # Initialize population
+        self.population = self._initialize_population(bounds)
+        
+        # Track history
+        self.history = []
+        
+        # Main evolution loop
+        for generation in range(self.config.generations):
+            # Evaluate fitness
+            self._evaluate_population(self.population)
+            
+            # Non-dominated sorting
+            fronts = self._fast_non_dominated_sort(self.population)
+            
+            # Calculate crowding distance for each front
+            for front in fronts:
+                self._calculate_crowding_distance(front)
+            
+            # Store Pareto front
+            self.pareto_front = fronts[0] if fronts else []
+            
+            # Find best solution (weighted sum)
+            if objectives:
+                self._calculate_weighted_fitness(objectives)
+                self.best_solution = max(
+                    self.population, key=lambda x: x.fitness
+                )
+            else:
+                # Default: maximize first objective (yield)
+                self.best_solution = max(
+                    self.population, key=lambda x: x.objectives[0]
+                )
+            
+            # Record history
+            self.history.append(deepcopy(self.population))
+            
+            # Callback
+            if callback:
+                callback(generation, self.population, self.pareto_front)
+            
+            # Create next generation
+            self.population = self._select_next_generation(self.population)
+        
+        # Final evaluation
+        self._evaluate_population(self.population)
+        fronts = self._fast_non_dominated_sort(self.population)
+        self.pareto_front = fronts[0] if fronts else []
+        
+        return self.get_results()
+    
+    def _calculate_weighted_fitness(
+        self,
+        objectives: List[OptimizationObjective]
+    ) -> None:
+        """Calculate weighted fitness from objectives"""
+        for ind in self.population:
+            fitness = 0.0
+            
+            for i, obj in enumerate(objectives):
+                if i >= len(ind.objectives):
+                    continue
+                
+                value = ind.objectives[i]
+                
+                # Normalize (simplified)
+                if obj.maximize:
+                    normalized = value / 100.0  # Assuming yield ~100
+                else:
+                    normalized = -value / 100.0  # Assuming time ~100
+                
+                fitness += obj.weight * normalized
+            
+            ind.fitness = fitness
+    
+    def get_results(self) -> Dict:
+        """Get optimization results"""
+        return {
+            "best_solution": (
+                self.best_solution.genes if self.best_solution else None
+            ),
+            "best_objectives": (
+                self.best_solution.objectives if self.best_solution else None
+            ),
+            "pareto_front": [
+                {
+                    "genes": ind.genes,
+                    "objectives": ind.objectives
+                }
+                for ind in self.pareto_front
+            ],
+            "population_size": len(self.population),
+            "pareto_size": len(self.pareto_front),
+            "generations": len(self.history),
+        }
+    
+    def get_pareto_solutions(self) -> List[Dict]:
+        """Get Pareto-optimal solutions"""
+        return [
+            {
+                "params": ind.genes,
+                "yield": ind.objectives[0] if len(ind.objectives) > 0 else 0,
+                "duration": ind.objectives[1] if len(ind.objectives) > 1 else 0,
+                "co2": ind.objectives[2] if len(ind.objectives) > 2 else 0,
+            }
+            for ind in self.pareto_front
+        ]
+
+
+# Convenience function
+def optimize_fermentation(
+    evaluate_fn: Callable,
+    bounds: Optional[Dict[str, Tuple[float, float]]] = None,
+    **config_kwargs
+) -> Dict:
+    """
+    Convenience function for fermentation optimization.
+    
+    Args:
+        evaluate_fn: Function that takes genes dict and returns objectives tuple
+        bounds: Parameter bounds
+        **config_kwargs: Additional configuration options
+    
+    Returns:
+        Optimization results dictionary
+    """
+    config = OptimizerConfig(**config_kwargs)
+    optimizer = GeneticOptimizer(config=config)
+    optimizer.set_evaluator(evaluate_fn)
+    
+    return optimizer.optimize(bounds=bounds)
