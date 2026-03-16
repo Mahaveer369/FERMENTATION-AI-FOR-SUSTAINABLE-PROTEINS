@@ -93,3 +93,9 @@ class YieldPredictor:
             "optimal_temp": 37.0,
             "optimal_ph": 7.0,
             "temp_range": 8.0,
+            "ph_range": 1.5,
+            "max_yield": 30.0,
+            "growth_rate": 0.45,
+            "protein_potential": 78,
+        },
+    }
