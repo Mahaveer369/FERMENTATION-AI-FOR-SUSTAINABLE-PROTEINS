@@ -127,3 +127,164 @@ class YieldPredictor:
             return normalized
         return "escherichia_coli"
     
+    def _normalize_substrate(self, name: str) -> str:
+        """Normalize substrate name"""
+        normalized = name.lower().replace(" ", "_")
+        if normalized in self.SUBSTRATE_PROFILES:
+            return normalized
+        return "glucose"
+    
+    def _gaussian_response(
+        self,
+        value: float,
+        optimal: float,
+        range_param: float
+    ) -> float:
+        """Calculate Gaussian response"""
+        return np.exp(-0.5 * ((value - optimal) / range_param) ** 2)
+    
+    def _logistic_growth(
+        self,
+        duration: float,
+        growth_rate: float
+    ) -> float:
+        """Calculate logistic growth factor"""
+        k = 1.0
+        return k / (1 + np.exp(-growth_rate * (duration - 24)))
+    
+    def predict_yield(
+        self,
+        params: YieldInput,
+        add_noise: bool = True
+    ) -> Tuple[float, float]:
+        """
+        Predict fermentation yield.
+        
+        Args:
+            params: Input parameters
+            add_noise: Whether to add random variation
+        
+        Returns:
+            Tuple of (yield_g_per_L, confidence)
+        """
+        microbe = self._normalize_microbe(params.microbe_type)
+        substrate = self._normalize_substrate(params.substrate)
+        
+        profile = self.MICROBE_PROFILES[microbe]
+        substrate_profile = self.SUBSTRATE_PROFILES[substrate]
+        
+        # Temperature response
+        temp_factor = self._gaussian_response(
+            params.temperature,
+            profile["optimal_temp"],
+            profile["temp_range"]
+        )
+        
+        # pH response
+        ph_factor = self._gaussian_response(
+            params.ph,
+            profile["optimal_ph"],
+            profile["ph_range"]
+        )
+        
+        # Time factor (logistic growth)
+        time_factor = self._logistic_growth(
+            params.duration,
+            profile["growth_rate"]
+        )
+        
+        # Oxygen effect
+        oxygen_factor = min(1.0, params.oxygen_level / 21.0)
+        
+        # Agitation effect
+        agitation_factor = self._gaussian_response(
+            params.agitation_speed, 200, 100
+        )
+        
+        # Substrate conversion
+        substrate_factor = substrate_profile["conversion"]
+        
+        # Calculate base yield
+        max_yield = profile["max_yield"]
+        base_yield = (
+            max_yield * temp_factor * ph_factor * time_factor *
+            oxygen_factor * agitation_factor * substrate_factor
+        )
+        
+        # Add noise
+        if add_noise:
+            noise = np.random.normal(1.0, self.noise_factor)
+            base_yield = max(0, base_yield * noise)
+        
+        # Confidence based on optimal conditions
+        confidence = 0.7 + 0.3 * (temp_factor * ph_factor * oxygen_factor)
+        
+        return float(base_yield), float(np.clip(confidence, 0, 1))
+    
+    def predict_energy(
+        self,
+        params: YieldInput,
+        predicted_yield: float,
+        add_noise: bool = True
+    ) -> float:
+        """
+        Predict energy consumption.
+        
+        Args:
+            params: Input parameters
+            predicted_yield: Predicted yield in g/L
+            add_noise: Whether to add random variation
+        
+        Returns:
+            Energy usage in kWh
+        """
+        # Base energy
+        base_energy = 0.5
+        
+        # Agitation energy
+        agitation_energy = (
+            params.duration / 24 * params.agitation_speed / 200 * 0.8
+        )
+        
+        # Temperature control energy
+        temp_diff = abs(params.temperature - 25)
+        temp_energy = params.duration / 24 * temp_diff / 10 * 0.3
+        
+        # Aeration energy
+        aeration_energy = (
+            params.oxygen_level / 21 * params.duration / 24 * 0.2
+        )
+        
+        total_energy = base_energy + agitation_energy + temp_energy + aeration_energy
+        
+        if add_noise:
+            noise = np.random.normal(1.0, self.noise_factor)
+            total_energy = max(0.1, total_energy * noise)
+        
+        return float(total_energy)
+    
+    def predict_co2(
+        self,
+        params: YieldInput,
+        predicted_yield: float,
+        energy_usage: float,
+        add_noise: bool = True
+    ) -> float:
+        """
+        Predict CO2 footprint.
+        
+        Args:
+            params: Input parameters
+            predicted_yield: Predicted yield in g/L
+            energy_usage: Energy usage in kWh
+            add_noise: Whether to add random variation
+        
+        Returns:
+            CO2 footprint in kg
+        """
+        substrate = self._normalize_substrate(params.substrate)
+        substrate_profile = self.SUBSTRATE_PROFILES[substrate]
+        
+        # Metabolic CO2
+        metabolic_co2 = predicted_yield * substrate_profile["co2_factor"] * 0.05
+        
