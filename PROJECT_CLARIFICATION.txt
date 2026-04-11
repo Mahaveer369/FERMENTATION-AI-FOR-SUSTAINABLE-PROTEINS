@@ -22,6 +22,7 @@ platform to address common questions about what the system does and does not do.
    - Generates actionable recommendations for process improvement
 
 3. PROTEIN SEQUENCE ANALYSIS
+
    - Analyzes existing protein sequences (not creating new ones)
    - Calculates: Molecular weight, Isoelectric point (pI), Hydrophobicity
    - Determines protein stability using instability index

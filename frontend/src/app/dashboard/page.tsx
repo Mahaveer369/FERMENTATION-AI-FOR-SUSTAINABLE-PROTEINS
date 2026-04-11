@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
     Beaker, Plus, History, Settings, LogOut, Leaf,
-    Zap, TrendingUp, FlaskConical, ChevronRight
+    Zap, TrendingUp, FlaskConical, ChevronRight, Activity
 } from "lucide-react";
 import { experiments, ai } from "@/lib/api";
 
@@ -108,6 +108,10 @@ export default function DashboardPage() {
                     <Link href="/protein" className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-white/5 text-gray-400 hover:text-white transition">
                         <FlaskConical className="w-5 h-5" />
                         Protein Analysis
+                    </Link>
+                    <Link href="/realtime" className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-white/5 text-gray-400 hover:text-white transition group border border-transparent hover:border-green-500/30">
+                        <Activity className="w-5 h-5 group-hover:text-green-400" />
+                        Real-Time API
                     </Link>
                 </nav>
 

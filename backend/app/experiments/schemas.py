@@ -16,6 +16,10 @@ class ExperimentCreate(BaseModel):
     duration: float = Field(..., ge=1, le=168, description="Duration in hours")
     oxygen_level: float = Field(21.0, ge=0, le=100, description="O2 percentage")
     agitation_speed: float = Field(200.0, ge=0, le=500, description="Agitation in RPM")
+    use_realtime_data: bool = Field(False, description="Fetch properties from live APIs")
+    protein_name: Optional[str] = Field(None, description="Target protein to produce")
+    organism: Optional[str] = Field(None, description="Organism source for UniProt")
+    predict_structure: bool = Field(False, description="Run ESMFold prediction")
 
 
 class ExperimentResponse(BaseModel):
@@ -85,3 +89,34 @@ class SubstrateInfo(BaseModel):
     display_name: str
     energy: float
     description: str
+
+
+class FoodTypeInfo(BaseModel):
+    """Information about a food type category"""
+    name: str
+    display_name: str
+    description: str
+    icon: str
+    related_microbes: List[str]
+    related_substrates: List[str]
+
+
+class MicrobeWithFoodContext(BaseModel):
+    """Microbe information with food context"""
+    name: str
+    display_name: str
+    optimal_temp: float
+    optimal_ph: float
+    max_yield: float
+    description: str
+    role: str
+    food_types: List[str]
+
+
+class SubstrateWithFoodContext(BaseModel):
+    """Substrate information with food context"""
+    name: str
+    display_name: str
+    energy: float
+    description: str
+    food_types: List[str]

@@ -32,6 +32,7 @@ class Settings(BaseSettings):
     uniprot_base_url: str = "https://rest.uniprot.org"
     kegg_base_url: str = "https://rest.kegg.jp"
     pubchem_base_url: str = "https://pubchem.ncbi.nlm.nih.gov/rest/pug"
+    esmfold_api_url: str = "https://health.api.nvidia.com/v1/biology/meta/esmfold"
     
     # Frontend
     frontend_url: str = "http://localhost:3000"

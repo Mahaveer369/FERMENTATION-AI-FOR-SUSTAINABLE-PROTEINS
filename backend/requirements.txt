@@ -32,6 +32,7 @@ biopython==1.83
 # External APIs
 httpx==0.26.0
 aiohttp==3.9.3
+requests>=2.31.0
 
 # AI/LLM - Groq API
 groq==0.8.0
