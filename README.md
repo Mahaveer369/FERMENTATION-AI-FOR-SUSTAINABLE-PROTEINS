@@ -186,8 +186,16 @@ docker-compose logs -f
 |-------|---------|
 | Gaussian Response | Temperature/pH optimum curves |
 | Logistic Growth | Microbial growth saturation |
-| Genetic Algorithm | Multi-objective optimization |
+| Yield Predictor | ML-based yield estimation |
+| Genetic Optimizer | Multi-objective optimization |
+| Pareto Optimization | Multi-objective Pareto frontier |
 | Rule-based + Perplexity | AI explanations |
+
+## 🔄 Real-time Features
+
+- **Live Simulation Pipeline** - ML pipeline visualization component
+- **Real-time Updates** - WebSocket-style experiment tracking
+- **Results Dashboard** - Comprehensive experiment analysis with charts
 
 ## 🌱 Sustainability Features
 
