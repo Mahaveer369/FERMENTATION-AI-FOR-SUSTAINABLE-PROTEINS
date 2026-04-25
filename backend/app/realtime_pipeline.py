@@ -232,12 +232,17 @@ def esmfold_predict_structure(sequence: str) -> Dict[str, Any]:
     }
     payload = {"sequence": sequence}
 
+    print(f"[ESMFold] Submitting sequence ({len(sequence)} aa) to NVIDIA ESMFold...")
     r = requests.post(
         ESMFOLD_URL,
         headers=headers,
         json=payload,
         timeout=ESMFOLD_TIMEOUT,
     )
+    
+    print(f"[ESMFold] Response status: {r.status_code}")
+    print(f"[ESMFold] Response preview: {r.text[:200] if r.text else 'empty'}")
+    
     r.raise_for_status()
 
     result = r.json()

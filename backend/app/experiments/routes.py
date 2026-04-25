@@ -798,7 +798,24 @@ async def run_experiment(
                     recommendations_list.append(
                         f"🔬 ESMFold: 3D structure confidence pLDDT = {realtime_plddt:.1f}/100 — {confidence_interp}"
                     )
+                else:
+                    recommendations_list.append(
+                        f"⚠️ ESMFold: Structure predicted but pLDDT could not be parsed"
+                    )
                 pdb_string_for_viewer = struct_data.get("pdb_data", "")
+                if not pdb_string_for_viewer:
+                    recommendations_list.append(
+                        f"⚠️ ESMFold: PDB data empty ({struct_data.get('pdb_length_chars', 0)} chars)"
+                    )
+                    logger.warning(f"ESMFold returned empty PDB data: {struct_data}")
+            elif struct_data.get("skipped"):
+                logger.info(f"Structure prediction skipped: {struct_data.get('reason')}")
+            else:
+                error_msg = struct_data.get("error", "Unknown error")
+                recommendations_list.append(
+                    f"❌ ESMFold failed: {error_msg}"
+                )
+                logger.error(f"ESMFold structure prediction failed: {error_msg}")
 
             # fermentation_insights is a list of strings
             insights_list = pipeline_res.get("fermentation_insights", [])
