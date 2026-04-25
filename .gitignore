@@ -68,3 +68,17 @@ Thumbs.db
 
 # Docker
 *.pid
+
+# Local notes and docs
+*.resolved
+*_notes.txt
+*.log
+project_go_through.txt
+MODELS_APIS.TXT
+PROJECT_CLARIFICATION.txt
+YOUR_DOUBTS_ANSWERED.txt
+updates.md
+commands.md
+ferma_gen_pitch_material.txt
+qna_defense.md.resolved
+watcher.log

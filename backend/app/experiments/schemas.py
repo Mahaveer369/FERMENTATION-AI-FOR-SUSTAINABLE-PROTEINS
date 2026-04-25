@@ -16,6 +16,7 @@ class ExperimentCreate(BaseModel):
     duration: float = Field(..., ge=1, le=168, description="Duration in hours")
     oxygen_level: float = Field(21.0, ge=0, le=100, description="O2 percentage")
     agitation_speed: float = Field(200.0, ge=0, le=500, description="Agitation in RPM")
+    bioreactor_volume: float = Field(1000.0, ge=1, description="Bioreactor volume in Liters")
     use_realtime_data: bool = Field(False, description="Fetch properties from live APIs")
     protein_name: Optional[str] = Field(None, description="Target protein to produce")
     organism: Optional[str] = Field(None, description="Organism source for UniProt")
@@ -33,6 +34,7 @@ class ExperimentResponse(BaseModel):
     duration: float
     oxygen_level: float
     agitation_speed: float
+    bioreactor_volume: float
     status: str
     created_at: datetime
 

@@ -864,6 +864,7 @@ async def run_experiment(
             duration=experiment_data.duration,
             oxygen_level=experiment_data.oxygen_level,
             agitation_speed=experiment_data.agitation_speed,
+            bioreactor_volume=experiment_data.bioreactor_volume,
             realtime_substrate_mw=realtime_substrate_mw,
             realtime_protein_length=realtime_protein_length,
             realtime_plddt=realtime_plddt
@@ -874,6 +875,12 @@ async def run_experiment(
         recs_text = " ".join(recommendations_list) if recommendations_list else ""
         if pdb_string_for_viewer:
             recs_text += f" __PDB_START__{pdb_string_for_viewer}__PDB_END__"
+        
+        # Embed Machine Learning Models executed
+        if hasattr(sim_result, 'executed_models') and sim_result.executed_models:
+            import json
+            models_json = json.dumps(sim_result.executed_models)
+            recs_text += f" __MODELS_START__{models_json}__MODELS_END__"
 
         # Create result record
         result = Result(

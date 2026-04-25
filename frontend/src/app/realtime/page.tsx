@@ -5,9 +5,10 @@ import Link from "next/link";
 import {
     Activity, ArrowLeft, Play, Loader2, Database,
     Dna, FlaskConical, Server, CheckCircle2, XCircle,
-    Route, BookOpen
+    Route, BookOpen, Sliders
 } from "lucide-react";
 import { realtime } from "@/lib/api";
+import MLPipeline from "@/components/MLPipeline";
 
 interface PipelineResult {
     substrate?: {
@@ -63,6 +64,13 @@ export default function RealTimePipelinePage() {
         protein_name: "ovalbumin",
         organism: "Gallus gallus",
         predict_structure: true,
+        temperature: 30,
+        ph: 5.5,
+        duration: 48,
+        oxygen: 21,
+        agitation: 200,
+        volume: 1000,
+        microbe_type: "saccharomyces_cerevisiae"
     });
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
@@ -263,6 +271,42 @@ export default function RealTimePipelinePage() {
                                 </button>
                             </form>
                         </div>
+
+                        {/* Simulation Parameters */}
+                        <div className="card border-blue-500/30">
+                            <h2 className="text-lg font-semibold mb-4 flex items-center gap-2 text-blue-400">
+                                <Sliders className="w-5 h-5" />
+                                Interactive Simulation Parameters
+                            </h2>
+                            <div className="space-y-4">
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="label">Temperature (°C): {formData.temperature}</label>
+                                        <input type="range" name="temperature" min="15" max="60" step="0.5" value={formData.temperature} onChange={handleChange} className="w-full accent-blue-500" />
+                                    </div>
+                                    <div>
+                                        <label className="label">pH: {formData.ph}</label>
+                                        <input type="range" name="ph" min="3" max="10" step="0.1" value={formData.ph} onChange={handleChange} className="w-full accent-blue-500" />
+                                    </div>
+                                    <div>
+                                        <label className="label">Duration (h): {formData.duration}</label>
+                                        <input type="range" name="duration" min="1" max="168" value={formData.duration} onChange={handleChange} className="w-full accent-blue-500" />
+                                    </div>
+                                    <div>
+                                        <label className="label">Oxygen (%): {formData.oxygen}</label>
+                                        <input type="range" name="oxygen" min="0" max="100" value={formData.oxygen} onChange={handleChange} className="w-full accent-blue-500" />
+                                    </div>
+                                    <div>
+                                        <label className="label">Agitation (RPM): {formData.agitation}</label>
+                                        <input type="range" name="agitation" min="0" max="500" value={formData.agitation} onChange={handleChange} className="w-full accent-blue-500" />
+                                    </div>
+                                    <div>
+                                        <label className="label">Volume (L): {formData.volume}</label>
+                                        <input type="number" name="volume" min="1" value={formData.volume} onChange={handleChange} className="input-field" />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
                     {/* Right Column = Results */}
@@ -439,6 +483,18 @@ export default function RealTimePipelinePage() {
                             </div>
                         )}
                     </div>
+                </div>
+
+                {/* ML Pipeline Visualization */}
+                <div className="mt-8">
+                    <h2 className="text-2xl font-bold mb-4 flex items-center gap-2">
+                        <Activity className="w-6 h-6 text-green-400" />
+                        Interactive ML Pipeline
+                    </h2>
+                    <p className="text-gray-400 mb-6">
+                        Watch parameters flow through the system. Adjust sliders above to see real-time recalculations instantly over the graph.
+                    </p>
+                    <MLPipeline params={formData} />
                 </div>
             </div>
         </div>

@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
     Beaker, ArrowLeft, Play, Loader2, ThermometerSun,
-    Clock, FlaskConical, Wind, Settings2, Leaf, ChevronDown, ChevronRight, Info, Sparkles, Droplets, Star, Activity
+    Clock, FlaskConical, Wind, Settings2, Leaf, ChevronDown, ChevronRight, Info, Sparkles, Droplets, Star, Activity, Box
 } from "lucide-react";
 import { experiments } from "@/lib/api";
 
@@ -61,6 +61,7 @@ export default function ExperimentPage() {
         duration: 48,
         oxygen_level: 21,
         agitation_speed: 200,
+        bioreactor_volume: 1000,
         use_realtime_data: false,
         protein_name: "",
         organism: "",
@@ -596,6 +597,25 @@ export default function ExperimentPage() {
                                 max={500}
                             />
                         </div>
+                        <div className="mt-4">
+                            <label htmlFor="bioreactor_volume" className="label flex items-center gap-2">
+                                <Box className="w-4 h-4 text-blue-400" /> Bioreactor Volume (Liters)
+                            </label>
+                            <input
+                                id="bioreactor_volume"
+                                name="bioreactor_volume"
+                                type="number"
+                                value={formData.bioreactor_volume || 1000}
+                                onChange={handleChange}
+                                className="input-field max-w-xs"
+                                min={1}
+                                placeholder="1000"
+                                required
+                            />
+                            <p className="text-xs text-gray-400 mt-2">
+                                Scales the base yield, energy, and CO₂ output to industrial dimensions.
+                            </p>
+                        </div>
                     </div>
 
                     {/* Real-Time API Integration Section */}
@@ -644,8 +664,8 @@ export default function ExperimentPage() {
                                                             organism: s.organism,
                                                         }))}
                                                         className={`text-left p-3 rounded-lg border transition-all ${formData.protein_name === s.protein_name && formData.organism === s.organism
-                                                                ? 'border-green-500/60 bg-green-900/30 ring-1 ring-green-500/30'
-                                                                : 'border-gray-700/60 bg-black/20 hover:border-green-500/30 hover:bg-green-900/10'
+                                                            ? 'border-green-500/60 bg-green-900/30 ring-1 ring-green-500/30'
+                                                            : 'border-gray-700/60 bg-black/20 hover:border-green-500/30 hover:bg-green-900/10'
                                                             }`}
                                                     >
                                                         <div className="font-semibold text-sm text-gray-200">{s.protein_name}</div>
@@ -743,7 +763,7 @@ export default function ExperimentPage() {
                         </button>
                     </div>
                 </form>
-            </div>
-        </div>
+            </div >
+        </div >
     );
 }

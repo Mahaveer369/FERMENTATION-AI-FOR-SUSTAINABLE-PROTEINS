@@ -75,6 +75,7 @@ class Experiment(Base):
     # Additional Parameters
     oxygen_level = Column(Float, default=21.0)  # Percentage
     agitation_speed = Column(Float, default=200.0)  # RPM
+    bioreactor_volume = Column(Float, default=1000.0)  # Liters
     
     created_at = Column(DateTime, default=datetime.utcnow)
     status = Column(String(50), default="pending")
